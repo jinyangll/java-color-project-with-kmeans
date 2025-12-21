@@ -1,13 +1,12 @@
 package kmeans;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Random;
 
 public class KMeans {
 
     int k;
-    int maxIterations = 15;
+    int maxIterations = 20;
 
     public KMeans(int k) {
         this.k = k;
@@ -43,6 +42,7 @@ public class KMeans {
                 sumR[p]+=pixels[j].r;
                 sumG[p]+=pixels[j].g;
                 sumB[p]+=pixels[j].b;
+
                 count[p]++;
             }
 
@@ -53,10 +53,6 @@ public class KMeans {
                 center[j] = new Pixel(sumR[j]/count[j],sumG[j]/count[j],sumB[j]/count[j]);
             }
         }
-
-
-
-
 
         return center;
     }
@@ -71,7 +67,6 @@ public class KMeans {
             int distR = p.r - center[i].r;
             int distG = p.g - center[i].g;
             int distB = p.b - center[i].b;
-
 
             double d = Math.sqrt(distR*distR + distG*distG + distB*distB);
 

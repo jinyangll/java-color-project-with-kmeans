@@ -26,8 +26,6 @@ public class Home extends JFrame {
 
     ColorPalette palette;
 
-    ColorLabel colorLabel;
-
     JSlider colorSlider;
     int colorCnt = 5;
 
@@ -37,7 +35,7 @@ public class Home extends JFrame {
     public Home(){
         setTitle("ColorProject");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(600,600);
+        setSize(600,570);
 
         Container c = getContentPane();
         c.setLayout(new BorderLayout());
@@ -120,10 +118,11 @@ public class Home extends JFrame {
 
     void titleImage(){
         try{
-            InputStream is = getClass().getResourceAsStream("title.png");
-            if (is == null) return;
+            InputStream titleImage = getClass().getResourceAsStream("title.png");
 
-            BufferedImage img = ImageIO.read(is);
+            if (titleImage == null) return;
+
+            BufferedImage img = ImageIO.read(titleImage);
 
             Image scaled = img.getScaledInstance(550, 550, Image.SCALE_SMOOTH);
             imageLabel.setIcon(new ImageIcon(scaled));
@@ -133,7 +132,7 @@ public class Home extends JFrame {
     }
 
 
-    // 팔레트 클래스
+    // palette class
     class ColorPalette extends JPanel {
 
         Color[] color = new Color[colorCnt];
@@ -147,6 +146,8 @@ public class Home extends JFrame {
             int h = 50;
 
             setPreferredSize(new Dimension(w,h));
+            ToolTipManager m = ToolTipManager.sharedInstance();
+            m.setInitialDelay(0);
 
             addMouseMotionListener(new MouseMotionAdapter(){
                 public void mouseMoved(MouseEvent e){
@@ -156,11 +157,14 @@ public class Home extends JFrame {
 
         }
 
+
         void updateToolTip(int x){
             int gap=4;
-            int rectWidth = (getWidth() - gap * (colorCnt - 1)) / colorCnt;
+            int cnt = color.length;
+            int rectWidth = (getWidth() - gap * (cnt - 1)) / cnt;
 
-            for (int i=0;i<colorCnt;i++){
+
+            for (int i=0;i<cnt;i++){
                 int startx = i * (rectWidth + gap);
                 int endx = startx + rectWidth;
 
@@ -180,21 +184,21 @@ public class Home extends JFrame {
 
 
 
-        public void setColor(Color[] recommandColor){
-            this.color = recommandColor;
+        public void setColor(Color[] color){
+            this.color = color;
             setToolTipText(null);
             repaint();
         }
 
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
 
+        public void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            int cnt = color.length;
             int gap = 4;
             int rectHeight = getHeight();
-            int rectWidth = (getWidth() - gap * (colorCnt - 1)) / colorCnt;
+            int rectWidth = (getWidth() - gap * (cnt - 1)) / cnt;
 
-            for (int i = 0; i < colorCnt; i++) {
+            for (int i = 0; i < cnt; i++) {
                 int x = i * (rectWidth + gap);
                 g.setColor(color[i]);
                 g.fillRect(x, 0, rectWidth, rectHeight);
@@ -206,21 +210,7 @@ public class Home extends JFrame {
 
 
 
-
-    class ColorLabel extends JPanel{
-        private JLabel[] colorLabel = new JLabel[colorCnt];
-
-        public ColorLabel(){
-            setLayout(new FlowLayout());
-
-            for(int i=0;i<colorCnt;i++){
-                colorLabel[i] = new JLabel("#______", JLabel.CENTER);
-                add(colorLabel[i]);
-            }
-        }
-    }
-
-    // 파일 업로드 버튼 클릭시 이벤트
+    // upload btn event
     class fileUploadListener implements ActionListener {
 
         private JFileChooser chooser;
@@ -244,27 +234,21 @@ public class Home extends JFrame {
 
             try {
                 File file = chooser.getSelectedFile();
-                String filePath = file.getPath();
-
                 uploadImage = ImageIO.read(file);
 
-                // 업로드한 이미지
-                ImageIcon icon = new ImageIcon(filePath);
 
-                // 이미지 크기 비율에 맞게 조정
                 int maxWidth = 400;
                 int maxHeight = 350;
 
-                Image img = icon.getImage();
-                int originalWidth = icon.getIconWidth();
-                int originalHeight = icon.getIconHeight();
+                int originalWidth = uploadImage.getWidth();
+                int originalHeight = uploadImage.getHeight();
 
                 double ratio = Math.min((double)maxWidth/originalWidth,(double)maxHeight/originalHeight);
 
                 int newWidth = (int)(originalWidth * ratio);
                 int newHeight = (int)(originalHeight * ratio);
 
-                Image newSizeImage = img.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+                Image newSizeImage = uploadImage.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
                 ImageIcon newSizeIcon = new ImageIcon(newSizeImage);
 
                 imageLabel.setIcon(newSizeIcon);
@@ -278,24 +262,16 @@ public class Home extends JFrame {
             }
 
 
-
-
-
         }
     }
 
 
-
-    // 색 추천 버튼 go 클릭 시 이벤트
+    // go btn event
     class colorRecommandListener implements ActionListener {
 
-        int width;
-        int height;
         Pixel[] pixels;
 
         public void actionPerformed(ActionEvent e) {
-
-            boolean clearChecked = clear.isSelected();
 
             if (uploadImage == null){
                 JOptionPane.showMessageDialog(null,
@@ -305,12 +281,22 @@ public class Home extends JFrame {
                 return;
             }
 
-            width = uploadImage.getWidth();
-            height = uploadImage.getHeight();
+            int width = uploadImage.getWidth();
+            int height = uploadImage.getHeight();
 
             pixels = new Pixel[width*height];
 
-            setImageDataSet();
+            int cnt = 0;
+
+            for (int y = 0;y<height;y++){
+                for(int x = 0;x<width;x++){
+
+                    Color c = new Color(uploadImage.getRGB(x,y));
+                    Pixel p = new Pixel(c.getRed(),c.getGreen(),c.getBlue());
+                    pixels[cnt] = p;
+                    cnt++;
+                }
+            }
 
             KMeans kmeans = new KMeans(colorCnt);
             Pixel[] center = kmeans.go(pixels);
@@ -325,7 +311,6 @@ public class Home extends JFrame {
 
             // 밝기 clamp
             Color[] clamped = new Color[colorCnt];
-
             Color[] cleared = new Color[colorCnt];
 
             for (int i = 0; i < colorCnt; i++) {
@@ -357,12 +342,7 @@ public class Home extends JFrame {
 
             }
 
-
-
-            // 일괄 처리
-//            for (int i = 0; i < colorCnt; i++) {
-//                clamped[i] = brighten(clamped[i], 0.2f);
-//            }
+            boolean clearChecked = clear.isSelected();
 
             if (clearChecked){
                 palette.setColor(cleared);
@@ -388,27 +368,11 @@ public class Home extends JFrame {
 
 
 
-        public void setImageDataSet(){
-
-            int cnt = 0;
-
-            for (int y = 0;y<height;y++){
-                for(int x = 0;x<width;x++){
-
-                    Color c = new Color(uploadImage.getRGB(x,y));
-                    Pixel p = new Pixel(c.getRed(),c.getGreen(),c.getBlue());
-                    pixels[cnt] = p;
-                    cnt++;
-                }
-            }
-        }
-
-
-
 
     }
 
 
+    // slider event
     class colorSliderListener implements ChangeListener {
 
         public void stateChanged(ChangeEvent e) {
